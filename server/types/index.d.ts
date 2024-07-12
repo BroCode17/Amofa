@@ -46,5 +46,42 @@ export interface CookieTokenOptions {
 export interface UpdateUserInfo {
    // name: string;
     email: string;
-    password: string
+    password: string;
+    oldPassword: string;
+}
+
+
+
+// Home Page
+export interface LayoutImage  extends Document{
+    public_src: string;
+    url: string;
+}
+
+export interface LayoutCarousel  extends Document{
+    name: string;
+    alt?: string;
+    image: LayoutImage
+}
+
+export interface TestimoialsInterface extends Document {
+    name: string;
+    subtext: string;
+    description: string;
+    date?: Date;
+    image: LayoutCarousel;
+}
+export interface HomepageLayoutInterface extends Document {
+    type: string
+    banner: Array<LayoutImage>;
+    carosel: Array<LayoutCarousel>;
+    calbackImage: LayoutImage;
+    testimonials: {
+        title: string;
+        test: Array<TestimoialsInterface>;
+        video: {
+            url: string
+        }
+    }
+
 }
