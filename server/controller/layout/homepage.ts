@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import CatchAsyncFunction from "../../config/CatchAsyncError";
-import { LayoutImage } from "../../types";
+import { LayoutCarousel, LayoutImage } from "../../types";
 import ErrorHandler from "../../config/ErrorHandler";
 import cloudinary from "cloudinary";
 import homepageModel from "../../model/homepage.model";
@@ -110,6 +110,8 @@ export const deleteBanner = CatchAsyncFunction(
   }
 );
 
+// Create and Update Carousel Back image = Admin can not delete image but can
+// can it
 export const updateCarouselBackImage = CatchAsyncFunction(
   async (req: Request, res: Response, next: NextFunction) => {
     const { image } = req.body;
@@ -119,31 +121,82 @@ export const updateCarouselBackImage = CatchAsyncFunction(
       return next(new ErrorHandler("Please, upload an image", 400));
     }
     const backCarousel = await homepageModel.findOne({}, { calbackImage: 1 });
-    console.log(backCarousel);
-    if (!backCarousel) {
-      return res.sendStatus(404);
-    }
-    //upload to cloudinary
+
     try {
-      //   const myCloud = await cloudinary.v2.uploader.upload(image, {
-      //     upload_preset: "dev_setup",
-      //     //moderation: "duplicate:0.8",
-      //   });
+      const myCloud = await cloudinary.v2.uploader.upload(image, {
+        upload_preset: "dev_setup",
+        //moderation: "duplicate:0.8",
+      });
 
-      //   const newCalBackImage = {
-      //     public_src: myCloud.public_id,
-      //     url: myCloud.secure_url,
-      //   } as LayoutImage;
-      //save to db;
+      const newBanner = {
+        public_src: myCloud.public_id,
+        url: myCloud.secure_url,
+      } as LayoutImage;
 
-      //append and save to db
-      // if(backCarousel?.$isEmpty){
+      if (backCarousel === null) {
+        //create new banner
+        await homepageModel.create({
+          calbackImage: newBanner,
+        });
+        return res.status(201).json({ success: true, banner: [newBanner] });
+      } else {
+        //delete old image from the cloudinary
+        await cloudinary.v2.uploader.destroy(
+          backCarousel.calbackImage?.public_src
+        );
 
-      // }
-
-      res.status(201).json({ success: true });
+        // Update db
+        await homepageModel.updateOne(
+          {},
+          { $set: { calbackImage: newBanner } },
+          { new: true }
+        );
+        return res.status(2 - 1).json({ banner: newBanner });
+      }
     } catch (error) {
       console.log(error);
+    }
+  }
+);
+
+//Carousel
+
+export const addCarousal = CatchAsyncFunction(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { name, alt, image } = req.body;
+
+    if (!name || !alt || !image) {
+      //Bad request
+      return next(new ErrorHandler("All inputs are require", 400));
+    }
+
+    //check if Carousel Array is empty
+    const calArray = await homepageModel.findOne({}, { carosel: 1 });
+
+    try {
+      //upload image to cloudinary
+      const myCloud = await cloudinary.v2.uploader.upload(image, {
+        upload_preset: "dev_setup",
+      });
+
+      const newCarousel = {
+        name,
+        alt,
+        image: {
+          public_src: myCloud.public_id,
+          url: myCloud.secure_url,
+        },
+      } as LayoutCarousel
+
+      if (calArray ===  null) {
+        await homepageModel.create({
+          carosel: newCarousel,
+        });
+      }else{
+         calArray?.carosel.push(newCarousel);
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.massage, 500));
     }
   }
 );
